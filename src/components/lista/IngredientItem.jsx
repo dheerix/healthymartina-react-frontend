@@ -49,6 +49,9 @@ export default function IngredientItem({
 		if (medidaSingular.toLowerCase() === 'al gusto') {
 			return 'al gusto';
 		}
+		if (typeof cantidad === 'string') {
+			return `${cantidad} ${medidaSingular}`.trim();
+		}
 
 		// Use plural form if quantity > 1
 		const medida = cantidad > 1 ? medidaPlural : medidaSingular;

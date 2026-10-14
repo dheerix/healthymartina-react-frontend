@@ -20,6 +20,7 @@ import AddIngredientModal from '../components/lista/AddIngredientModal';
 import EditIngredientModal from '../components/lista/EditIngredientModal';
 import DeleteIngredientModal from '../components/lista/DeleteIngredientModal';
 import CalendarSwitchModal from '../components/lista/CalendarSwitchModal';
+import { aggregateShoppingListIngredient } from '../utils/shopping-list/shoppingListUtils';
 import './Lista.scss';
 
 // MOCK DATA for design verification
@@ -658,74 +659,13 @@ export default function Lista() {
 		listaContent.taken_ingredients || listaContent.taken_ingredientes || [];
 	const customItems = listaContent.custom_items || [];
 
-	// Scale an ingredient's cantidad by its servings/porcion ratio.
-	// Subrecipe ingredients store the servings factor in get_servings and use
-	// subrecipe.porcion as the base (the subrecipe's own default yield), not the
-	// parent recipe's porcion. Regular ingredients use porcion directly.
-	const computeScaledQty = (ing) => {
-		const rawQty = parseFloat(ing.cantidad) || 0;
-		// Subrecipe check must come BEFORE the getServings===1 guard:
-		// when user selects the parent recipe's default servings, get_recipe_cantidad
-		// equals exactly 1 (e.g. 1 tz), but we still need to divide by the
-		// sub-recipe's own yield (e.g. 3 tz) to get the correct fraction.
-		if (ing.subrecipe && typeof ing.subrecipe === 'object') {
-			const getServings = parseFloat(ing.get_servings) || 0;
-			const subPorcion = parseFloat(ing.subrecipe.porcion) || 1;
-			return (rawQty * getServings) / subPorcion;
-		}
-		const getServings = parseFloat(ing.get_servings);
-		if (!getServings || getServings === 1) {
-			// No servings data — use raw quantity as-is (e.g. manual items)
-			return rawQty;
-		}
-		const porcion = parseFloat(ing.porcion) || 1;
-		return (rawQty * getServings) / porcion;
-	};
-
 	// Normalize and aggregate ingredients
 	const ingredients = Object.keys(rawIngredients).reduce((acc, categoryId) => {
 		const categoryIngredients = rawIngredients[categoryId] || [];
-
-		// Group ingredients by their ID to aggregate quantities
-		const ingredientMap = new Map();
-
-		categoryIngredients.forEach((ing) => {
-			const key = `${ing.ingrediente_id || ing.id}-${ing.ingrediente || ing.nombre}`;
-
-			if (ingredientMap.has(key)) {
-				// Aggregate quantities for repeated ingredients
-				const existing = ingredientMap.get(key);
-				const existingQty = parseFloat(existing.cantidad) || 0;
-				const newQty = computeScaledQty(ing);
-				existing.cantidad = existingQty + newQty;
-
-				// Also aggregate from repeat array if it exists
-				if (ing.repeat && ing.repeat.length > 0) {
-					const repeatQty = ing.repeat.reduce(
-						(sum, r) => sum + computeScaledQty(r),
-						0,
-					);
-					existing.cantidad += repeatQty;
-				}
-			} else {
-				// Add new ingredient with aggregated quantity from repeats
-				let totalQty = computeScaledQty(ing);
-				if (ing.repeat && ing.repeat.length > 0) {
-					totalQty += ing.repeat.reduce(
-						(sum, r) => sum + computeScaledQty(r),
-						0,
-					);
-				}
-
-				ingredientMap.set(key, {
-					...ing,
-					cantidad: totalQty,
-					type: ing.type || 'receta', // Default to 'receta' if type is missing
-				});
-			}
-		});
-
-		acc[categoryId] = Array.from(ingredientMap.values());
+		acc[categoryId] = categoryIngredients.map((ingredient) => ({
+			...aggregateShoppingListIngredient(ingredient),
+			type: ingredient.type || 'receta',
+		}));
 		return acc;
 	}, {});
 
