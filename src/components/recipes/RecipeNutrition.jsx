@@ -4,7 +4,7 @@ import React from 'react';
  * Recipe Nutrition Component
  * Displays nutritional information from the recipe data
  */
-export function RecipeNutrition({ nutrientes, filterInfo = [] }) {
+export function RecipeNutrition({ nutrientes, filterInfo = [], filterEnabled = false }) {
 	const formatNumber = (num) => {
 		if (num > 0.01) {
 			return Number(num).toFixed(2);
@@ -50,7 +50,7 @@ export function RecipeNutrition({ nutrientes, filterInfo = [] }) {
 			return false;
 		}
 
-		if (selectedNutrientIds.size > 0) {
+		if (filterEnabled) {
 			return selectedNutrientIds.has(nutrientId);
 		}
 

@@ -23,7 +23,6 @@ export function RecipeDetail() {
 	const [searchParams] = useSearchParams();
 	const recipeSlug = slug || null;
 	const recipeId = id ? Number(id) : null;
-	const RECIPE_PREFERENCE_IDS = [94, 99, 96, 97, 213, 180, 102, 103, 106, 107];
 
 	const slugQuery = useQuery({
 		queryKey: ['recipe', 'slug', recipeSlug],
@@ -139,7 +138,8 @@ export function RecipeDetail() {
 			recipe.getInstrucciones?.()
 	);
 
-	const preferenceNutritionIds = Array.isArray(preferences?.nutritions)
+	const hasPreferenceNutritionIds = Array.isArray(preferences?.nutritions);
+	const preferenceNutritionIds = hasPreferenceNutritionIds
 		? preferences.nutritions.map(Number).filter((id) => Number.isFinite(id))
 		: Array.isArray(preferences?.nutrition_options)
 			? preferences.nutrition_options
@@ -150,10 +150,9 @@ export function RecipeDetail() {
 	const recipeFilterInfo = Array.isArray(recipe.filter_info)
 		? recipe.filter_info.map(Number).filter((id) => Number.isFinite(id))
 		: [];
-	const resolvedFilterInfo = (preferenceNutritionIds.length
+	const resolvedFilterInfo = hasPreferenceNutritionIds
 		? preferenceNutritionIds
-		: recipeFilterInfo
-	).filter((id) => RECIPE_PREFERENCE_IDS.includes(id));
+		: recipeFilterInfo;
 
 	// Ensure we have the required data structure
 	const recipeData = {
@@ -183,6 +182,8 @@ export function RecipeDetail() {
 		tips: normalizedTips,
 		nutrientes: recipe.nutrientes || recipe.nutrition || { info: [] },
 		filter_info: resolvedFilterInfo,
+		has_nutrition_preferences:
+			hasPreferenceNutritionIds || recipeFilterInfo.length > 0,
 		comments: recipe.comments || [],
 		reactions: recipe.reactions || {
 			likes: 0,
@@ -258,6 +259,7 @@ export function RecipeDetail() {
 									<RecipeNutrition
 										nutrientes={recipeData.nutrientes}
 										filterInfo={recipeData.filter_info}
+										filterEnabled={recipeData.has_nutrition_preferences}
 										key={`nutrition-${recipeData.id}`}
 									/>
 								</div>
